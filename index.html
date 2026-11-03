@@ -1,0 +1,1289 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>採用管理システム(ATS)</title>
+
+<!-- スクリーニング用チャット (BotUI) CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/botui/build/botui.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/botui/build/botui-theme-default.css">
+
+<style>
+/* ====== 基本スタイル ====== */
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; margin: 0; padding: 0; }
+
+/* 1. ログイン画面 */
+#login-section { display: none; justify-content: center; align-items: center; height: 100vh; }
+.login-box { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 100%; max-width: 400px; box-sizing: border-box; }
+.login-box h2 { margin: 0 0 20px 0; color: #333; text-align: center; font-size: 24px; }
+.login-box input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 14px; outline: none; }
+.login-box button { width: 100%; padding: 12px; background-color: #1a73e8; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold; }
+.login-box button:hover { background-color: #1557b0; }
+#login-error { color: red; font-size: 14px; margin-top: 15px; display: none; line-height: 1.4; word-break: break-all; font-weight: bold; text-align: center; }
+
+/* 2. 管理者ダッシュボード */
+#app-container { display: none; padding: 20px; max-width: 1200px; margin: 0 auto; }
+.header { display: flex; justify-content: space-between; align-items: center; background-color: white; padding: 15px 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+.header h2 { margin: 0; color: #333; font-size: 22px; }
+.tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+.tab-btn { padding: 12px 24px; background-color: #e0e0e0; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; color: #555; }
+.tab-btn.active { background-color: #1a73e8; color: white; box-shadow: 0 2px 5px rgba(26,115,232,0.4); }
+.tab-btn:hover:not(.active) { background-color: #d0d0d0; }
+.section-container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+.btn { padding: 10px 15px; background-color: #1a73e8; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold; }
+.btn-sm { padding: 5px 8px; font-size: 12px; cursor: pointer; border-radius: 3px; border: none; color: white; margin-right: 5px; }
+.btn-email { background-color: #f2994a; }
+.btn-edit { background-color: #2f80ed; }
+.btn-cancel-action { background-color: #eb5757; }
+.btn-delete { background-color: #828282; }
+.btn-report { background-color: #9b51e0; }
+.btn-log { background-color: #009688; }
+.btn-warn { background-color: #f2994a; }
+.btn-success { background-color: #27ae60; }
+.update-info { font-size: 11px; color: #777; margin-top: 8px; line-height: 1.3; }
+table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; }
+th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #ddd; }
+th { background-color: #f8f9fa; color: #333; }
+
+/* 3. モーダル */
+.modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); justify-content: center; align-items: center; }
+.modal-content { background-color: white; padding: 30px; border-radius: 8px; width: 520px; max-width: 90%; box-shadow: 0 4px 12px rgba(0,0,0,0.2); box-sizing: border-box; max-height: 85vh; overflow-y: auto; }
+.modal-content h3 { margin-top: 0; color: #333; font-size: 20px; }
+.modal-content label { display: block; margin-top: 15px; font-weight: bold; font-size: 14px; color: #444; }
+.modal-content input, .modal-content select, .modal-content textarea { width: 100%; padding: 8px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 14px; }
+.modal-actions { margin-top: 25px; text-align: right; }
+.btn-cancel { background-color: #5f6368; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; }
+.btn-ok { background-color: #1a73e8; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; margin-left: 10px; }
+
+/* 4. 音声面接UI */
+#interview-candidate-section { display: none; padding: 30px; max-width: 800px; margin: 40px auto; background: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+.interview-header { text-align: center; border-bottom: 2px solid #e0e0e0; padding-bottom: 15px; margin-bottom: 20px; }
+.interview-header h2 { color: #1a73e8; margin: 0 0 10px 0; }
+.chat-box { height: 350px; border: 1px solid #ddd; border-radius: 8px; padding: 15px; overflow-y: auto; background-color: #fafafa; display: flex; flex-direction: column; gap: 10px; }
+.msg { max-width: 80%; padding: 10px 15px; border-radius: 12px; font-size: 15px; line-height: 1.5; }
+.msg-ai { background-color: #e8f0fe; color: #1967d2; align-self: flex-start; border-bottom-left-radius: 2px; }
+.msg-user { background-color: #340853; color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
+.controls { display: flex; flex-direction: column; align-items: center; gap: 15px; margin-top: 20px; }
+.mic-btn { width: 80px; height: 80px; border-radius: 50%; background-color: #1a73e8; color: white; border: none; font-size: 30px; cursor: pointer; outline: none; }
+.mic-btn.recording { background-color: #ea4335; animation: pulse 1.5s infinite; }
+@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(234,67,53,0.7); } 70% { box-shadow: 0 0 0 15px rgba(234,67,53,0); } 100% { box-shadow: 0 0 0 0 rgba(234,67,53,0); } }
+.status-text { font-size: 14px; color: #666; font-weight: bold; width: 100%; text-align: center; white-space: pre-wrap; word-break: break-all; }
+.finish-btn { padding: 12px 24px; background-color: #5f6368; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; }
+
+/* 5. 応募受付・スクリーニングUI */
+#entry-screening-section { display: none; max-width: 500px; margin: 40px auto; padding: 0 15px; }
+.botui-container { background-color: #fff; border-radius: 10px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+.botui-message-content { background-color: #e8f0fe; color: #1967d2; }
+.botui-message-content.human { background-color: #340853; color: #fff; }
+.botui-actions-buttons-button { background-color: #1a73e8; color: white; }
+</style>
+</head>
+<body>
+
+<!-- 1. 管理ログイン画面 -->
+<div id="login-section">
+    <div class="login-box">
+        <h2>システムログイン</h2>
+        <input type="text" id="userId" placeholder="ユーザーID">
+        <input type="password" id="password" placeholder="パスワード">
+        <button onclick="attemptLogin()" id="loginBtn">ログイン</button>
+        <div id="login-error"></div>
+    </div>
+</div>
+
+<!-- 2. 強制パスワード変更モーダル -->
+<div id="forcePasswordModal" class="modal" style="background-color: rgba(0,0,0,0.85);">
+    <div class="modal-content">
+        <h3>初期パスワードの変更</h3>
+        <p style="font-size:14px; color: #555; margin-bottom: 20px;">セキュリティ保護のため、新しいパスワードを設定してください。</p>
+        <label>新しいパスワード</label><input type="password" id="forceNewPassword">
+        <label>新しいパスワード (確認用)</label><input type="password" id="forceNewPasswordConfirm">
+        <div class="modal-actions">
+            <button class="btn btn-cancel" onclick="logout()">ログアウト</button>
+            <button class="btn btn-ok" onclick="submitForcePasswordChange()" id="forcePwChangeBtn">設定して開始</button>
+        </div>
+    </div>
+</div>
+
+<!-- 3. 管理者用ダッシュボード -->
+<div id="app-container">
+    <div class="header">
+        <h2>管理ダッシュボード</h2>
+        <div>
+            <span id="welcome-msg" style="margin-right: 20px; font-weight:bold;"></span>
+            <button class="btn" style="background-color: #f2994a; margin-right: 10px;" onclick="openPasswordModal()">パスワード変更</button>
+            <button class="btn" style="background-color: #5f6368;" onclick="logout()">ログアウト</button>
+        </div>
+    </div>
+    <div class="tabs">
+        <button id="tab-interview" class="tab-btn active" onclick="switchTab('interview')">面接管理</button>
+        <button id="tab-screening" class="tab-btn" onclick="switchTab('screening')">スクリーニング設問管理</button>
+        <button id="tab-users" class="tab-btn" onclick="switchTab('users')">ユーザー管理</button>
+    </div>
+
+    <!-- 面接管理タブ -->
+    <div id="interview-section" class="section-container">
+        <div style="margin-bottom: 15px; display:flex; gap:10px;">
+            <button class="btn" style="background-color: #34a853;" onclick="window.open('?mode=entry', '_blank')">📱 応募受付URLを開く</button>
+            <button class="btn" style="background-color: #340853;" onclick="openRegisterModal()">＋ 手動で面接予定を登録</button>
+        </div>
+        <div style="overflow-x: auto;">
+            <table>
+                <thead><tr><th>ID</th><th>氏名</th><th>メールアドレス</th><th>ステータス</th><th>面接日時</th><th>URL</th><th>AI評価</th><th>操作</th></tr></thead>
+                <tbody id="applicant-list"><tr><td colspan="8" style="text-align: center;">データを読み込み中...</td></tr></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- スクリーニング設問管理タブ -->
+    <div id="screening-section" class="section-container" style="display: none;">
+        <div style="margin-bottom: 15px; display:flex; justify-content: space-between; align-items: center;">
+            <button class="btn" onclick="openQuestionModal(-1)">＋ 設問を追加</button>
+            <button class="btn btn-success" onclick="saveScreeningQuestionsData()" id="saveScreeningBtn">変更を保存 (同期)</button>
+        </div>
+        <div style="font-size: 13px; color: #666; margin-bottom:10px;">※設問の編集は「編集」ボタンから行えます。編集後は「変更を保存 (同期)」を押してスプレッドシートへ反映してください。</div>
+        <div style="overflow-x: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 50px; text-align:center;">順序</th>
+                        <th style="width: 60px; text-align:center;">状態</th>
+                        <th>設問文 (チャットで聞く内容)</th>
+                        <th style="width: 90px;">入力形式</th>
+                        <th>選択肢 / 案内文字</th>
+                        <th style="width: 120px;">操作</th>
+                    </tr>
+                </thead>
+                <tbody id="screening-list"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ユーザー管理タブ -->
+    <div id="users-section" class="section-container" style="display: none;">
+        <div style="margin-bottom: 15px;"><button class="btn" style="background-color: #340853;" onclick="openUserModal('new')">＋ 新規ユーザー作成</button></div>
+        <div style="overflow-x: auto;">
+            <table>
+                <thead><tr><th>ユーザーID</th><th>表示名</th><th>権限</th><th>最終ログイン日時</th><th>操作</th></tr></thead>
+                <tbody id="users-list"><tr><td colspan="5" style="text-align: center;">データを読み込み中...</td></tr></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 4. 応募受付・スクリーニングチャット画面 (BotUI) -->
+<div id="entry-screening-section">
+    <div style="text-align: center; margin-bottom: 20px;">
+        <h2 style="color: #1a73e8; margin: 0 0 8px 0;">AI採用チャット窓口</h2>
+        <p style="font-size: 14px; color: #666; margin: 0;">ご応募ありがとうございます。<br>いくつかの質問にチャットでお答えください。</p>
+    </div>
+    <div class="botui-app-container" id="chatbot-app">
+        <bot-ui></bot-ui>
+    </div>
+</div>
+
+<!-- 5. 応募者用 AI音声面接画面 -->
+<div id="interview-candidate-section">
+    <div class="interview-header">
+        <h2 id="candidateHeaderTitle">AI音声面接会場</h2>
+        <div id="candidateSubInfo" style="font-size:14px; color: #666;">読み込み中...</div>
+    </div>
+    <div id="startInterviewContainer" style="text-align:center; padding: 40px 20px;">
+        <!-- 初期表示：確認中メッセージ（開始ボタンは隠す） -->
+        <div id="interviewCheckingStatus" style="font-size:16px; color: #666;">
+            面接情報の確認中...
+        </div>
+        <!-- 5分前以降にのみ表示される開始UI -->
+        <div id="interviewReadyArea" style="display: none;">
+            <p style="font-size:16px; line-height:1.6; margin-bottom: 25px;">
+                これよりAI面接を開始します。<br>
+                お使いのブラウザの「マイクの許可」をお願いいたします。<br>
+                準備ができましたら「面接を開始する」ボタンを押してください。
+            </p>
+            <button class="btn" style="padding: 15px 40px; font-size: 18px; font-weight:bold; background-color: #1a73e8;" onclick="startAIInterview()">面接を開始する</button>
+        </div>
+        <!-- 5分前より前にアクセスされた場合の待機案内 -->
+        <div id="interviewWaitArea" style="display: none;"></div>
+    </div>
+    <div id="activeInterviewContainer" style="display:none;">
+        <div class="chat-box" id="chatBox"></div>
+        <div class="controls">
+            <button id="micBtn" class="mic-btn" onclick="toggleMic()">🎤</button>
+            <div id="statusText" class="status-text">マイクボタンを押して回答を話してください</div>
+            <button class="finish-btn" onclick="confirmFinishInterview()">面接を終了して結果を送信</button>
+        </div>
+    </div>
+    <div id="finishInterviewContainer" style="display: none; text-align:center; padding: 40px 20px;">
+        <h3 id="finishStatusTitle" style="color: #34a853; font-size:24px;">面接が完了しました</h3>
+        <p id="finishStatusText" style="font-size:15px; color: #555; line-height:1.6; margin-top: 15px;">本日はAI面接にご参加いただき、誠にありがとうございました。<br>結果につきましては、追って担当者よりご連絡いたします。</p>
+    </div>
+</div>
+
+<!-- モーダル類 -->
+<div id="passwordModal" class="modal"><div class="modal-content"><h3>パスワード変更</h3><label>現在のパスワード</label><input type="password" id="oldPassword"><label>新しいパスワード</label><input type="password" id="newPassword"><label>新しいパスワード (確認用)</label><input type="password" id="newPasswordConfirm"><div class="modal-actions"><button class="btn btn-cancel" onclick="closeModal('passwordModal')">キャンセル</button><button class="btn btn-ok" onclick="submitPasswordChange()">変更</button></div></div></div>
+
+<div id="registerModal" class="modal"><div class="modal-content"><h3>新規応募者の手動登録</h3><label>氏名</label><input type="text" id="appName" placeholder="山田 太郎"><label>メールアドレス</label><input type="email" id="appEmail"><label>面接日時</label><input type="datetime-local" id="appDateTime"><div class="modal-actions"><button class="btn btn-cancel" onclick="closeModal('registerModal')">キャンセル</button><button class="btn btn-ok" onclick="submitRegister()" id="regBtn">登録</button></div></div></div>
+
+<div id="editModal" class="modal"><div class="modal-content"><h3>応募者情報の変更 (リスケ)</h3><input type="hidden" id="editAppId"><label>氏名</label><input type="text" id="editAppName"><label>メールアドレス</label><input type="email" id="editAppEmail"><label>面接日時</label><input type="datetime-local" id="editAppDateTime"><div class="modal-actions"><button class="btn btn-cancel" onclick="closeModal('editModal')">キャンセル</button><button class="btn btn-ok" onclick="submitEdit()">変更</button></div></div></div>
+
+<div id="userModal" class="modal"><div class="modal-content"><h3 id="userModalTitle">ユーザー作成</h3><input type="hidden" id="modalUserMode"><input type="hidden" id="modalUserId"><label>ユーザーID (半角英数)</label><input type="text" id="modalNewUserId"><label>表示名</label><input type="text" id="modalUserName"><label>権限</label><select id="modalUserRole"></select><div class="modal-actions"><button class="btn btn-cancel" onclick="closeModal('userModal')">キャンセル</button><button class="btn btn-ok" onclick="submitUser()">保存</button></div></div></div>
+
+<div id="questionModal" class="modal">
+    <div class="modal-content" style="width: 560px;">
+        <h3 id="questionModalTitle">設問の編集</h3>
+        <div style="display:flex; gap:15px; margin-top:10px;">
+            <div style="flex:1;">
+                <label>表示順序</label>
+                <input type="number" id="qModalOrder" min="1" value="1">
+            </div>
+            <div style="flex:1; display:flex; align-items:center; margin-top:25px;">
+                <label style="margin:0; cursor:pointer; font-size:14px;">
+                    <input type="checkbox" id="qModalIsActive" checked style="width:auto; margin-right:5px;"> 有効にする
+                </label>
+            </div>
+        </div>
+
+        <label>設問文 (チャットで質問する内容)</label>
+        <textarea id="qModalText" rows="2" placeholder="例: 週に何日程度、勤務をご希望ですか？"></textarea>
+
+        <label>入力形式</label>
+        <select id="qModalType" onchange="toggleQuestionTypeFields()">
+            <option value="select">選択肢 (ボタン選択)</option>
+            <option value="text">自由記述 (テキスト入力)</option>
+        </select>
+
+        <label>プレースホルダー (入力枠の案内テキスト)</label>
+        <input type="text" id="qModalPlaceholder" placeholder="例: 山田 太郎 / 選択してください">
+
+        <div id="qModalSelectArea" style="margin-top:15px; background:#f9f9f9; padding:15px; border-radius:6px; border:1px solid #eee;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <span style="font-weight:bold; font-size:13px; color:#444;">選択肢と合否判定</span>
+                <button type="button" class="btn-sm" style="background-color:#1a73e8;" onclick="addOptionRow()">＋ 選択肢を追加</button>
+            </div>
+            <p style="font-size:12px; color:#777; margin:0 0 10px 0;">※求職者に提示する選択肢を入力し、「通過（合格）」とする選択肢にチェックを入れてください。</p>
+            <div id="qModalOptionsList" style="display:flex; flex-direction:column; gap:8px;"></div>
+        </div>
+
+        <div id="qModalTextArea" style="display:none; margin-top:15px; background:#f9f9f9; padding:12px; border-radius:6px; border:1px solid #eee; font-size:13px; color:#666;">
+            ※自由記述は求職者に文字入力を求めます。入力完了で次の設問へ進みます。
+        </div>
+
+        <div id="qModalNgMessageArea" style="margin-top:15px;">
+            <label>不合格（NG）時のメッセージ</label>
+            <textarea id="qModalNgMessage" rows="2" placeholder="例: 誠に恐縮ですが、今回は募集条件と合致しないため見送りとさせていただきます。"></textarea>
+        </div>
+
+        <div class="modal-actions">
+            <button class="btn btn-cancel" onclick="closeModal('questionModal')">キャンセル</button>
+            <button class="btn btn-ok" onclick="saveQuestionModal()">OK (反映)</button>
+        </div>
+    </div>
+</div>
+
+<!-- 面接希望日時選択モーダル (翌日午前9時以降限定) -->
+<div id="dateTimeSelectModal" class="modal" style="z-index: 2500;">
+    <div class="modal-content" style="width: 420px;">
+        <h3>面接希望日時の選択</h3>
+        <p style="font-size:13px; color:#666; margin: 5px 0 15px 0;">ご希望の面接日程を選択してください。<br><span style="color:#e65100; font-weight:bold;">※翌日午前9時以降の日時を指定いただけます。</span></p>
+        <label>希望日</label>
+        <input type="date" id="inputModalDate" onchange="updateTimeOptionsForDate()">
+        <label>希望時間 (30分単位)</label>
+        <select id="selectModalTime"></select>
+        <div class="modal-actions">
+            <button class="btn btn-cancel" onclick="closeModal('dateTimeSelectModal')">キャンセル</button>
+            <button class="btn btn-ok" onclick="confirmDateTimeSelection()">決定</button>
+        </div>
+    </div>
+</div>
+
+<div id="logModal" class="modal" style="z-index: 2000;">
+    <div class="modal-content" style="width: 600px;">
+        <h3 id="logModalTitle">応募受付内容</h3>
+        <div id="logModalContent" style="margin-top:15px; font-size:14px; line-height:1.6; max-height:60vh; overflow-y:auto;"></div>
+        <div class="modal-actions">
+            <button class="btn btn-cancel" onclick="closeModal('logModal')">閉じる</button>
+        </div>
+    </div>
+</div>
+
+<div id="confirmModal" class="modal" style="z-index: 2000;"><div class="modal-content"><h3>確認</h3><div id="confirmMessage" style="margin:20px 0; font-size:14px; line-height:1.5;"></div><div class="modal-actions"><button class="btn btn-cancel" onclick="closeConfirmModal(false)">キャンセル</button><button class="btn btn-ok" onclick="closeConfirmModal(true)">OK</button></div></div></div>
+<div id="alertModal" class="modal" style="z-index: 2001;"><div class="modal-content"><h3 id="alertTitle">お知らせ</h3><div id="alertMessage" style="margin:20px 0; font-size:14px; line-height:1.5; white-space:pre-wrap;"></div><div class="modal-actions"><button class="btn btn-ok" onclick="closeModal('alertModal')">閉じる</button></div></div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/botui/build/botui.min.js"></script>
+
+<script>
+const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbwwdYlOK2vL-YvVPopqDbmYf3p5BQW3y-re2N4Hny7sIBq0fXRhSkErHDEEJsWfc2vqFg/exec';
+
+let currentUser = { id: '', name: '', role: '' };
+let allApplicantsData = [];
+let screeningQuestionsData = [];
+let confirmCallback = null;
+let currentEditingQuestionIndex = -1;
+let dateTimeResolver = null;
+
+let currentApplicant = null;
+let chatHistory = [];
+let isRecording = false;
+let recognition = null;
+let currentTranscript = "";
+let finalAndInterimTranscript = "";
+let interviewTimer = null;
+
+let entryBot = null;
+let entryAnswersLog = {};
+let entryApplicantName = "応募者";
+let entryApplicantEmail = "";
+
+async function callApi(action, params = {}) {
+    params.action = action;
+    try {
+        const res = await fetch(GAS_API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ data: JSON.stringify(params) })
+        });
+        return await res.json();
+    } catch(e) {
+        return { success: false, message: "通信エラー: " + e.message };
+    }
+}
+
+window.onload = function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const applicantIdParam = urlParams.get('id');
+    const adminMode = urlParams.get('mode') === 'admin';
+    const entryMode = urlParams.get('mode') === 'entry';
+
+    if (entryMode) {
+        document.getElementById('login-section').style.display = 'none';
+        document.getElementById('entry-screening-section').style.display = 'block';
+        startScreeningChat();
+    } else if (applicantIdParam) {
+        document.getElementById('login-section').style.display = 'none';
+        document.getElementById('interview-candidate-section').style.display = 'block';
+        loadCandidateInterview(applicantIdParam);
+    } else if (adminMode) {
+        document.getElementById('login-section').style.display = 'flex';
+    } else {
+        document.body.innerHTML = '<div style="text-align:center; padding: 60px 20px;"><h2>無効なURLです</h2></div>';
+    }
+};
+
+function updateTimeOptionsForDate() {
+    const selectedDate = document.getElementById('inputModalDate').value;
+    const sel = document.getElementById('selectModalTime');
+    const prevVal = sel.value;
+    sel.innerHTML = '';
+
+    const now = new Date();
+    const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    const tomorrowStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
+
+    const startHour = (selectedDate === tomorrowStr) ? 9 : 0;
+
+    for (let h = startHour; h < 24; h++) {
+        for (let m = 0; m < 60; m += 30) {
+            const hh = String(h).padStart(2, '0');
+            const mm = String(m).padStart(2, '0');
+            const val = `${hh}:${mm}`;
+            sel.add(new Option(val, val));
+        }
+    }
+
+    if ([...sel.options].some(o => o.value === prevVal)) {
+        sel.value = prevVal;
+    } else {
+        sel.selectedIndex = 0;
+    }
+}
+
+function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+function showAlert(msg, title='お知らせ') {
+    document.getElementById('alertTitle').innerText = title;
+    document.getElementById('alertMessage').innerText = msg;
+    document.getElementById('alertModal').style.display = 'flex';
+}
+function showConfirm(msg, cb) {
+    document.getElementById('confirmMessage').innerText = msg;
+    confirmCallback = cb;
+    document.getElementById('confirmModal').style.display = 'flex';
+}
+function closeConfirmModal(isOk) {
+    closeModal('confirmModal');
+    if (isOk && confirmCallback) confirmCallback();
+    confirmCallback = null;
+}
+
+function switchTab(tab) {
+    document.getElementById('tab-interview').classList.remove('active');
+    document.getElementById('tab-screening').classList.remove('active');
+    document.getElementById('tab-users').classList.remove('active');
+    document.getElementById('interview-section').style.display = 'none';
+    document.getElementById('screening-section').style.display = 'none';
+    document.getElementById('users-section').style.display = 'none';
+
+    if (tab === 'interview') {
+        document.getElementById('tab-interview').classList.add('active');
+        document.getElementById('interview-section').style.display = 'block';
+        loadDashboardData();
+    } else if (tab === 'screening') {
+        document.getElementById('tab-screening').classList.add('active');
+        document.getElementById('screening-section').style.display = 'block';
+        loadScreeningQuestions();
+    } else if (tab === 'users') {
+        document.getElementById('tab-users').classList.add('active');
+        document.getElementById('users-section').style.display = 'block';
+        loadUsersData();
+    }
+}
+
+async function attemptLogin() {
+    const userId = document.getElementById('userId').value, pass = document.getElementById('password').value;
+    const errDiv = document.getElementById('login-error'), btn = document.getElementById('loginBtn');
+    if(!userId || !pass) { errDiv.innerText = "入力してください。"; errDiv.style.display = "block"; return; }
+    btn.innerText = "通信中..."; btn.disabled = true; errDiv.style.display = "none";
+    
+    const res = await callApi('verifyLogin', { userId, password: pass });
+    btn.innerText = "ログイン"; btn.disabled = false;
+    
+    if (res.success) {
+        currentUser = { id: userId, name: res.name, role: res.role };
+        if (res.requirePasswordChange) {
+            document.getElementById('login-section').style.display = 'none';
+            document.getElementById('forcePasswordModal').style.display = 'flex';
+        } else showDashboard();
+    } else {
+        errDiv.innerText = res.message; errDiv.style.display = "block";
+    }
+}
+
+function showDashboard() {
+    document.getElementById('login-section').style.display = 'none'; 
+    document.getElementById('forcePasswordModal').style.display = 'none';
+    document.getElementById('app-container').style.display = 'block';
+    document.getElementById('welcome-msg').innerText = `${currentUser.name} (${currentUser.role}) さん`;
+    
+    if (currentUser.role === '運用者') {
+        document.getElementById('tab-users').style.display = 'none';
+        document.getElementById('tab-screening').style.display = 'none';
+    }
+    
+    switchTab('interview');
+}
+
+function logout() { location.reload(); }
+
+async function submitForcePasswordChange() {
+    const newPw = document.getElementById('forceNewPassword').value, confirmPw = document.getElementById('forceNewPasswordConfirm').value;
+    if (!newPw || newPw !== confirmPw) return showAlert('パスワードが一致しません。');
+    document.getElementById('forcePwChangeBtn').disabled = true;
+    const res = await callApi('changePassword', { userId: currentUser.id, oldPassword: 'password1234', newPassword: newPw });
+    if (res.success) { showAlert('設定しました。'); showDashboard(); } else showAlert('エラー: ' + res.message);
+}
+
+function openPasswordModal() { document.getElementById('passwordModal').style.display = 'flex'; }
+async function submitPasswordChange() {
+    const oldPw = document.getElementById('oldPassword').value, newPw = document.getElementById('newPassword').value, confirmPw = document.getElementById('newPasswordConfirm').value;
+    if (newPw !== confirmPw) return showAlert('一致しません。');
+    const res = await callApi('changePassword', { userId: currentUser.id, oldPassword: oldPw, newPassword: newPw });
+    if (res.success) { showAlert('変更しました。'); closeModal('passwordModal'); } else showAlert('エラー: ' + res.message);
+}
+
+async function loadDashboardData() {
+    const data = await callApi('getApplicantsData');
+    allApplicantsData = (data && data.success !== false && Array.isArray(data)) ? data : [];
+    renderApplicantTable(allApplicantsData);
+}
+
+function renderApplicantTable(dataToRender) {
+    const tbody = document.getElementById('applicant-list'); tbody.innerHTML = '';
+    if(!dataToRender || dataToRender.length === 0) return tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">該当データなし</td></tr>';
+    
+    dataToRender.forEach(row => {
+        if(!row[0] && !row[1]) return;
+        const isCanceled = row[3] && row[3].indexOf('キャンセル') !== -1;
+        const isNg = row[3] === 'スクリーニングNG';
+        const isCompleted = row[3] === '面接完了';
+        const hasReportUrl = row[8] && row[8].indexOf('http') === 0;
+        const link = (!isNg && row[5] && row[5].indexOf('http') === 0) ? `<a href="${row[5]}" target="_blank" style="color:#1a73e8; font-weight:bold;">面接URL</a>` : '-';
+        
+        const reportBtn = (isCompleted && hasReportUrl)
+            ? `<button class="btn-sm btn-report" onclick="window.open('${row[8]}', '_blank')">レポート</button>`
+            : `<button class="btn-sm btn-delete" disabled style="opacity:0.5;">レポート</button>`;
+            
+        let btns = `<button class="btn-sm btn-log" onclick="openLogModal('${row[0]}')">受付内容</button>`;
+
+        if (isNg) {
+            btns += `<button class="btn-sm btn-delete" disabled style="opacity:0.5;">メール</button><button class="btn-sm btn-delete" disabled style="opacity:0.5;">変更</button>`;
+        } else if (isCanceled) {
+            btns += `<button class="btn-sm btn-delete" disabled style="opacity:0.5;">メール</button><button class="btn-sm btn-delete" disabled style="opacity:0.5;">変更</button>`;
+        } else {
+            btns += `<button class="btn-sm btn-email" onclick="sendMail('${row[0]}', '${row[1]}')">メール</button><button class="btn-sm btn-edit" onclick="openEditModal('${row[0]}', '${row[1]}', '${row[2]}', '${row[4]}')">変更</button>`;
+        }
+        
+        btns += reportBtn;
+        
+        if (isNg || isCanceled) {
+            btns += `<button class="btn-sm btn-delete" disabled style="opacity:0.5;">中止</button>`;
+        } else {
+            btns += `<button class="btn-sm btn-cancel-action" onclick="cancelInterview('${row[0]}', '${row[1]}')">中止</button>`;
+        }
+            
+        btns += `<button class="btn-sm btn-delete" onclick="deleteApplicantData('${row[0]}', '${row[1]}')">削除</button>`;
+        btns += `<div class="update-info">更新: ${row[10] || '-'}<br>${row[11] || '-'}</div>`;
+        
+        const statusHtml = isNg ? `<b style="color:#ea4335;">${row[3]}</b>` : `<b>${row[3]}</b>`;
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${row[0]}</td><td>${row[1]}</td><td>${row[2]}</td><td>${statusHtml}</td><td>${row[4] || '-'}</td><td>${link}</td><td>${row[7] || '-'}</td><td>${btns}</td>`;
+        tbody.appendChild(tr);
+    });
+}
+
+function openRegisterModal() { document.getElementById('registerModal').style.display='flex'; }
+async function submitRegister() {
+    const name = document.getElementById('appName').value, email = document.getElementById('appEmail').value, dtStr = document.getElementById('appDateTime').value;
+    if(!name || !email || !dtStr) return showAlert('入力してください。');
+    document.getElementById('regBtn').innerText='処理中...';
+    const res = await callApi('registerApplicant', { name, email, dateTimeStr: dtStr, updaterName: currentUser.name, screeningLog: '', status: '' });
+    document.getElementById('regBtn').innerText='登録';
+    if(res.success) { closeModal('registerModal'); loadDashboardData(); } else showAlert(res.message);
+}
+
+function openEditModal(id, name, email, dtStr) {
+    document.getElementById('editAppId').value = id;
+    document.getElementById('editAppName').value = name;
+    document.getElementById('editAppEmail').value = email;
+    try {
+        const p = dtStr.split(' '), d = p[0].split('/'), t = p[1];
+        document.getElementById('editAppDateTime').value = `${d[0]}-${d[1]}-${d[2]}T${t}`;
+    } catch(e) {}
+    document.getElementById('editModal').style.display = 'flex';
+}
+
+async function submitEdit() {
+    const res = await callApi('updateApplicant', { 
+        applicantId: document.getElementById('editAppId').value, 
+        name: document.getElementById('editAppName').value, 
+        email: document.getElementById('editAppEmail').value, 
+        dateTimeStr: document.getElementById('editAppDateTime').value, 
+        updaterName: currentUser.name 
+    });
+    if(res.success) { closeModal('editModal'); loadDashboardData(); } else showAlert(res.message);
+}
+
+function sendMail(id, name) { showConfirm(`${name} 様へ案内メールを送信しますか？`, async () => { const r = await callApi('sendInvitationEmail', {applicantId:id, updaterName:currentUser.name}); if(r.success) loadDashboardData(); else showAlert(r.message); }); }
+function cancelInterview(id, name) { showConfirm(`${name} 様の面接を中止扱いにしますか？`, async () => { const r = await callApi('cancelApplicant', {applicantId:id, updaterName:currentUser.name}); if(r.success) loadDashboardData(); else showAlert(r.message); }); }
+function deleteApplicantData(id, name) { showConfirm(`${name} 様のデータを完全に削除しますか？`, async () => { const r = await callApi('deleteApplicant', {applicantId:id}); if(r.success) loadDashboardData(); else showAlert(r.message); }); }
+
+function openLogModal(appId) {
+    const applicant = allApplicantsData.find(r => r[0] === appId);
+    if (!applicant) return;
+    document.getElementById('logModalTitle').innerText = `${applicant[1]} 様の受付内容`;
+    const logContainer = document.getElementById('logModalContent');
+    logContainer.innerHTML = '';
+    
+    const logStr = applicant[9];
+    if (!logStr) {
+        logContainer.innerHTML = '<p style="color:#777;">回答ログが記録されていません。</p>';
+    } else {
+        try {
+            const logObj = JSON.parse(logStr);
+            let html = '<table style="width:100%; border-collapse:collapse; margin-top:5px;">';
+            for (const [q, a] of Object.entries(logObj)) {
+                html += `<tr><th style="width:40%; background:#f8f9fa; padding:10px; border:1px solid #ddd; vertical-align:top;">${q}</th><td style="padding:10px; border:1px solid #ddd; vertical-align:top; white-space:pre-wrap;">${a}</td></tr>`;
+            }
+            html += '</table>';
+            logContainer.innerHTML = html;
+        } catch(e) {
+            logContainer.innerText = logStr;
+        }
+    }
+    document.getElementById('logModal').style.display = 'flex';
+}
+
+async function loadUsersData() {
+    const tbody = document.getElementById('users-list'); 
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">データを読み込み中...</td></tr>';
+    const users = await callApi('getUsersData', { requesterId: currentUser.id });
+    tbody.innerHTML = '';
+    
+    if(!users || users.success === false || !Array.isArray(users)) {
+        return tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:red;">${users && users.message ? users.message : '取得失敗'}</td></tr>`;
+    }
+    if (users.length === 0) return tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">登録ユーザーがいません</td></tr>';
+    
+    users.forEach(u => {
+        let btns = (currentUser.role === '管理者' || (currentUser.role === '副管理者' && u.role === '運用者')) 
+            ? `<button class="btn-sm btn-edit" onclick="openUserModal('edit', '${u.userId}', '${u.name}', '${u.role}')">編集</button>` : '';
+        if (btns !== '' && currentUser.id !== u.userId) {
+            btns += `<button class="btn-sm btn-warn" onclick="resetUserPassword('${u.userId}')">リセット</button>`;
+        }
+        if (currentUser.role === '管理者' && currentUser.id !== u.userId) {
+            btns += `<button class="btn-sm btn-delete" onclick="deleteUserData('${u.userId}')">削除</button>`;
+        }
+        const tr = document.createElement('tr'); 
+        tr.innerHTML = `<td>${u.userId}</td><td>${u.name}</td><td>${u.role}</td><td>${u.lastLogin || '-'}</td><td>${btns}</td>`;
+        tbody.appendChild(tr);
+    });
+}
+
+function openUserModal(mode, id='', name='', role='運用者') {
+    document.getElementById('modalUserMode').value = mode; 
+    document.getElementById('modalUserId').value = id; 
+    document.getElementById('modalNewUserId').value = id; 
+    document.getElementById('modalUserName').value = name;
+    
+    if (mode === 'edit') {
+        document.getElementById('userModalTitle').innerText = 'ユーザー編集';
+        document.getElementById('modalNewUserId').disabled = true;
+    } else {
+        document.getElementById('userModalTitle').innerText = 'ユーザー作成';
+        document.getElementById('modalNewUserId').disabled = false;
+    }
+    
+    const roleSel = document.getElementById('modalUserRole'); 
+    roleSel.innerHTML = '<option value="運用者">運用者</option>';
+    if(currentUser.role === '管理者') { 
+        roleSel.add(new Option('副管理者','副管理者')); 
+        roleSel.add(new Option('管理者','管理者')); 
+    }
+    roleSel.value = role; 
+    document.getElementById('userModal').style.display = 'flex';
+}
+
+async function submitUser() {
+    const mode = document.getElementById('modalUserMode').value;
+    const targetUserId = mode === 'new' ? document.getElementById('modalNewUserId').value.trim() : document.getElementById('modalUserId').value.trim();
+    const newName = document.getElementById('modalUserName').value.trim();
+    const newRole = document.getElementById('modalUserRole').value;
+    
+    if(!targetUserId || !newName) return showAlert('入力してください。');
+    
+    const res = mode === 'new' 
+        ? await callApi('createUser', {requesterId: currentUser.id, newUserId: targetUserId, newName, newRole})
+        : await callApi('updateUser', {requesterId: currentUser.id, targetUserId, newName, newRole});
+        
+    if (res.success) { 
+        closeModal('userModal'); 
+        loadUsersData(); 
+    } else { 
+        showAlert(res.message); 
+    }
+}
+
+function resetUserPassword(tid) { 
+    showConfirm("パスワードを初期化 (password1234) しますか？", async () => { 
+        const res = await callApi('resetPassword', {requesterId:currentUser.id, targetUserId:tid}); 
+        if(res.success) showAlert('パスワードを初期化しました。');
+        else showAlert('エラー: ' + res.message);
+    }); 
+}
+
+function deleteUserData(tid) { 
+    showConfirm("アカウントを削除しますか？", async () => { 
+        const res = await callApi('deleteUser', {requesterId:currentUser.id, targetUserId:tid}); 
+        if(res.success) loadUsersData();
+        else showAlert('エラー: ' + res.message);
+    }); 
+}
+
+async function loadScreeningQuestions() {
+    document.getElementById('screening-list').innerHTML = '<tr><td colspan="6" style="text-align:center;">読み込み中...</td></tr>';
+    const res = await callApi('getScreeningQuestions');
+    if(res.success && res.questions) {
+        screeningQuestionsData = res.questions;
+        renderScreeningTable();
+    } else {
+        document.getElementById('screening-list').innerHTML = '<tr><td colspan="6" style="color:red; text-align:center;">読込エラー: ' + (res.message || 'データなし') + '</td></tr>';
+    }
+}
+
+function renderScreeningTable() {
+    const tbody = document.getElementById('screening-list');
+    tbody.innerHTML = '';
+    if(screeningQuestionsData.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">設問がありません。「＋ 設問を追加」を押してください。</td></tr>';
+        return;
+    }
+    
+    screeningQuestionsData.forEach((q, index) => {
+        const tr = document.createElement('tr');
+        
+        const typeBadge = q.type === 'select' 
+            ? '<span style="background:#e8f0fe; color:#1a73e8; padding:3px 8px; border-radius:4px; font-size:12px; font-weight:bold;">選択肢</span>' 
+            : '<span style="background:#fef7e0; color:#b06000; padding:3px 8px; border-radius:4px; font-size:12px; font-weight:bold;">自由記述</span>';
+            
+        const statusBadge = q.isActive 
+            ? '<span style="color:#27ae60; font-weight:bold;">有効</span>' 
+            : '<span style="color:#999; font-weight:bold;">無効</span>';
+        
+        let detailHtml = '';
+        if (q.type === 'select') {
+            const opts = (q.options || []).map(opt => {
+                const isPass = (q.passConditions || []).includes(opt);
+                return isPass 
+                    ? `<span style="display:inline-block; margin:2px; padding:2px 6px; background:#e6f4ea; color:#137333; border-radius:3px; font-size:12px;">${opt} (通過)</span>` 
+                    : `<span style="display:inline-block; margin:2px; padding:2px 6px; background:#fce8e6; color:#c5221f; border-radius:3px; font-size:12px;">${opt} (NG)</span>`;
+            }).join(' ');
+            detailHtml = opts || '-';
+        } else {
+            detailHtml = `<span style="color:#666; font-size:13px;">案内文字: <b>${q.placeholder || '(設定なし)'}</b></span>`;
+        }
+
+        tr.innerHTML = `
+            <td style="text-align:center; font-weight:bold;">${q.order}</td>
+            <td style="text-align:center;">${statusBadge}</td>
+            <td><b>${q.text}</b></td>
+            <td>${typeBadge}</td>
+            <td>${detailHtml}</td>
+            <td>
+                <button class="btn-sm btn-edit" onclick="openQuestionModal(${index})">編集</button>
+                <button class="btn-sm btn-delete" onclick="deleteScreeningRow(${index})">削除</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function openQuestionModal(index = -1) {
+    currentEditingQuestionIndex = index;
+    const isNew = index === -1;
+    document.getElementById('questionModalTitle').innerText = isNew ? '設問の追加' : '設問の編集';
+    
+    let q;
+    if (isNew) {
+        const nextOrder = screeningQuestionsData.length > 0 ? Math.max(...screeningQuestionsData.map(item => item.order)) + 1 : 1;
+        q = {
+            id: '',
+            order: nextOrder,
+            isActive: true,
+            text: '',
+            type: 'select',
+            placeholder: '',
+            options: ['はい', 'いいえ'],
+            passConditions: ['はい'],
+            ngMessage: '誠に恐縮ですが、今回は条件が合わないため見送りとさせていただきます。'
+        };
+    } else {
+        q = screeningQuestionsData[index];
+    }
+    
+    document.getElementById('qModalOrder').value = q.order;
+    document.getElementById('qModalIsActive').checked = q.isActive;
+    document.getElementById('qModalText').value = q.text || '';
+    document.getElementById('qModalType').value = q.type || 'select';
+    document.getElementById('qModalPlaceholder').value = q.placeholder || '';
+    document.getElementById('qModalNgMessage').value = q.ngMessage || '';
+    
+    const optList = document.getElementById('qModalOptionsList');
+    optList.innerHTML = '';
+    const options = q.options || [];
+    const passConditions = q.passConditions || [];
+    
+    if (options.length === 0 && q.type === 'select') {
+        addOptionRow('はい', true);
+        addOptionRow('いいえ', false);
+    } else {
+        options.forEach(opt => {
+            const isPass = passConditions.includes(opt);
+            addOptionRow(opt, isPass);
+        });
+    }
+    
+    toggleQuestionTypeFields();
+    document.getElementById('questionModal').style.display = 'flex';
+}
+
+function toggleQuestionTypeFields() {
+    const type = document.getElementById('qModalType').value;
+    if (type === 'select') {
+        document.getElementById('qModalSelectArea').style.display = 'block';
+        document.getElementById('qModalTextArea').style.display = 'none';
+        document.getElementById('qModalNgMessageArea').style.display = 'block';
+    } else {
+        document.getElementById('qModalSelectArea').style.display = 'none';
+        document.getElementById('qModalTextArea').style.display = 'block';
+        document.getElementById('qModalNgMessageArea').style.display = 'none';
+    }
+}
+
+function addOptionRow(text = '', isPass = false) {
+    const list = document.getElementById('qModalOptionsList');
+    const row = document.createElement('div');
+    row.className = 'option-row';
+    row.style.cssText = 'display:flex; align-items:center; gap:8px;';
+    row.innerHTML = `
+        <input type="text" class="opt-text" value="${text}" placeholder="選択肢名 (例: 週3日以上)" style="flex:1; padding:6px; font-size:13px; border:1px solid #ccc; border-radius:4px;">
+        <label style="display:flex; align-items:center; gap:4px; font-size:12px; cursor:pointer; margin:0; white-space:nowrap;">
+            <input type="checkbox" class="opt-pass" ${isPass ? 'checked' : ''} style="width:auto; margin:0;"> 通過
+        </label>
+        <button type="button" class="btn-sm btn-delete" style="padding:4px 8px; font-size:14px; background:#ea4335;" onclick="this.parentElement.remove()" title="削除">🗑️</button>
+    `;
+    list.appendChild(row);
+}
+
+function saveQuestionModal() {
+    const order = Number(document.getElementById('qModalOrder').value) || 1;
+    const isActive = document.getElementById('qModalIsActive').checked;
+    const text = document.getElementById('qModalText').value.trim();
+    const type = document.getElementById('qModalType').value;
+    const placeholder = document.getElementById('qModalPlaceholder').value.trim();
+    const ngMessage = document.getElementById('qModalNgMessage').value.trim();
+    
+    if (!text) return showAlert('設問文を入力してください。');
+    
+    let options = [];
+    let passConditions = [];
+    
+    if (type === 'select') {
+        const rows = document.querySelectorAll('#qModalOptionsList .option-row');
+        if (rows.length === 0) return showAlert('選択肢を1つ以上追加してください。');
+        
+        let hasPass = false;
+        rows.forEach(r => {
+            const optVal = r.querySelector('.opt-text').value.trim();
+            const isPass = r.querySelector('.opt-pass').checked;
+            if (optVal) {
+                options.push(optVal);
+                if (isPass) {
+                    passConditions.push(optVal);
+                    hasPass = true;
+                }
+            }
+        });
+        
+        if (options.length === 0) return showAlert('選択肢の文言を入力してください。');
+        if (!hasPass) return showAlert('少なくとも1つの選択肢に「通過」のチェックを入れてください。');
+    }
+    
+    const questionObj = {
+        id: currentEditingQuestionIndex >= 0 ? screeningQuestionsData[currentEditingQuestionIndex].id : '',
+        order: order,
+        isActive: isActive,
+        text: text,
+        type: type,
+        placeholder: placeholder,
+        options: options,
+        passConditions: passConditions,
+        ngMessage: ngMessage
+    };
+    
+    if (currentEditingQuestionIndex >= 0) {
+        screeningQuestionsData[currentEditingQuestionIndex] = questionObj;
+    } else {
+        screeningQuestionsData.push(questionObj);
+    }
+    
+    closeModal('questionModal');
+    renderScreeningTable();
+}
+
+function deleteScreeningRow(index) {
+    showConfirm('この設問を削除しますか？', () => {
+        screeningQuestionsData.splice(index, 1);
+        renderScreeningTable();
+    });
+}
+
+async function saveScreeningQuestionsData() {
+    const btn = document.getElementById('saveScreeningBtn');
+    btn.innerText = "保存中..."; btn.disabled = true;
+    screeningQuestionsData.sort((a,b) => a.order - b.order);
+    
+    const res = await callApi('saveScreeningQuestions', { requesterId: currentUser.id, questions: screeningQuestionsData });
+    btn.innerText = "変更を保存 (同期)"; btn.disabled = false;
+    
+    if(res.success) {
+        showAlert('スクリーニング設問を正常に保存しました。');
+        loadScreeningQuestions();
+    } else {
+        showAlert('保存エラー: ' + res.message);
+    }
+}
+
+async function startScreeningChat() {
+    try {
+        entryBot = new BotUI('chatbot-app');
+    } catch(e) {
+        console.error("BotUI Init Error:", e);
+        return;
+    }
+    
+    await entryBot.message.add({ delay: 500, content: '初めまして！AI採用アシスタントです。' });
+    await entryBot.message.add({ delay: 800, content: 'ご応募ありがとうございます。面接に進む前に、いくつかの質問にお答えください。' });
+    
+    const res = await callApi('getScreeningQuestions');
+    if(!res.success || !res.questions || res.questions.length === 0) {
+        await entryBot.message.add({ delay: 500, content: '現在募集受付を一時停止しております。' });
+        return;
+    }
+    
+    const activeQuestions = res.questions.filter(q => q.isActive);
+    let isPassed = true;
+    let firstNgMessage = '';
+    
+    for (let i = 0; i < activeQuestions.length; i++) {
+        const q = activeQuestions[i];
+        await entryBot.message.add({ delay: 800, content: q.text });
+        
+        let userAnswer = "";
+        const ph = q.placeholder || 'ここに入力してください';
+        
+        if (q.type === 'select' && q.options && q.options.length > 0) {
+            const actions = q.options.map(opt => ({ text: opt, value: opt }));
+            const resAction = await entryBot.action.button({ delay: 400, action: actions });
+            userAnswer = resAction.value;
+        } else {
+            const resAction = await entryBot.action.text({ delay: 400, action: { placeholder: ph } });
+            userAnswer = resAction.value;
+            
+            if(q.text.includes('名前') || q.text.includes('氏名')) entryApplicantName = userAnswer.trim();
+            if(q.text.includes('メール') || q.text.includes('アドレス')) entryApplicantEmail = userAnswer.trim();
+        }
+        
+        entryAnswersLog[q.text] = userAnswer;
+        
+        if (q.passConditions && q.passConditions.length > 0) {
+            if (!q.passConditions.includes(userAnswer)) {
+                if (isPassed) {
+                    firstNgMessage = q.ngMessage || '誠に恐縮ですが、今回は募集条件と合致しないため見送りとさせていただきます。';
+                }
+                isPassed = false;
+            }
+        }
+    }
+    
+    if (isPassed) {
+        await entryBot.message.add({ delay: 600, content: '事前確認はすべてクリアいたしました！' });
+        await entryBot.message.add({ delay: 800, content: '続いて、AI音声面接の実施希望日時を選択してください。\n※翌日午前9時以降の日程を指定いただけます。' });
+        
+        await entryBot.action.button({
+            delay: 400,
+            action: [{ text: '📅 面接希望日時を選択する', value: 'open_modal' }]
+        });
+        
+        const selectedDateTime = await pickDateTimeViaModal();
+        
+        await entryBot.message.add({ human: true, content: selectedDateTime });
+        entryAnswersLog['希望面接日時'] = selectedDateTime;
+        
+        await entryBot.message.add({ delay: 800, content: '登録処理を行っています。少々お待ちください...' });
+        
+        const regRes = await callApi('registerApplicant', { 
+            name: entryApplicantName, 
+            email: entryApplicantEmail, 
+            dateTimeStr: selectedDateTime, 
+            updaterName: 'AIスクリーニング', 
+            screeningLog: JSON.stringify(entryAnswersLog),
+            status: 'スクリーニング通過'
+        });
+        
+        if(regRes.success) {
+            await entryBot.message.add({ delay: 800, content: `面接希望日時を【${selectedDateTime}】にて受け付けました。` });
+            await entryBot.message.add({ delay: 800, content: 'ご回答内容を確認の上、担当者より面接日時確定のご連絡および当日の会場URLをメールにてお送りいたします。今しばらくお待ちください。' });
+        } else {
+            await entryBot.message.add({ delay: 800, content: '登録中にエラーが発生しました。時間を置いて再度お試しください。' });
+        }
+    } else {
+        await entryBot.message.add({ delay: 800, content: '確認中です。少々お待ちください...' });
+        await callApi('registerApplicant', { 
+            name: entryApplicantName, 
+            email: entryApplicantEmail, 
+            dateTimeStr: '-', 
+            updaterName: 'AIスクリーニング', 
+            screeningLog: JSON.stringify(entryAnswersLog),
+            status: 'スクリーニングNG'
+        });
+        
+        await entryBot.message.add({ delay: 800, content: firstNgMessage || '誠に恐縮ですが、今回は条件が合わないため見送りとさせていただきます。' });
+        await entryBot.message.add({ delay: 1000, content: 'またの機会にご応募を心よりお待ちしております。' });
+    }
+}
+
+function pickDateTimeViaModal() {
+    return new Promise((resolve) => {
+        dateTimeResolver = resolve;
+        const now = new Date();
+        const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+        const yyyy = tomorrow.getFullYear();
+        const mm = String(tomorrow.getMonth() + 1).padStart(2, '0');
+        const dd = String(tomorrow.getDate()).padStart(2, '0');
+        const minDateStr = `${yyyy}-${mm}-${dd}`;
+        
+        const dateInput = document.getElementById('inputModalDate');
+        dateInput.min = minDateStr;
+        dateInput.value = minDateStr;
+        
+        updateTimeOptionsForDate();
+        document.getElementById('dateTimeSelectModal').style.display = 'flex';
+    });
+}
+
+function confirmDateTimeSelection() {
+    const dVal = document.getElementById('inputModalDate').value;
+    const tVal = document.getElementById('selectModalTime').value;
+    if (!dVal) return showAlert('希望日を選択してください。');
+    
+    const now = new Date();
+    const tomorrow9am = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 9, 0, 0);
+    const chosen = new Date(`${dVal.replace(/-/g, '/')} ${tVal}:00`);
+    
+    if (chosen < tomorrow9am) {
+        return showAlert('面接希望日時は【翌日午前9時以降】を選択してください。');
+    }
+    
+    const formatted = `${dVal.replace(/-/g, '/')} ${tVal}`;
+    closeModal('dateTimeSelectModal');
+    if (dateTimeResolver) {
+        dateTimeResolver(formatted);
+        dateTimeResolver = null;
+    }
+}
+
+async function loadCandidateInterview(applicantId) {
+    const res = await callApi('getApplicantForInterview', { applicantId });
+    if (res.success) {
+        currentApplicant = res.applicant;
+        document.getElementById('candidateHeaderTitle').innerText = `【AI音声面接】 ${currentApplicant.name} 様`;
+        document.getElementById('candidateSubInfo').innerText = `ID: ${currentApplicant.id}`;
+        
+        const checkingDiv = document.getElementById('interviewCheckingStatus');
+        if (checkingDiv) checkingDiv.style.display = 'none';
+
+        if (currentApplicant.status === '面接完了') { 
+            document.getElementById('startInterviewContainer').innerHTML = '<p style="color:#27ae60; font-size:18px; font-weight:bold;">この面接は既に完了しています。</p>';
+            return;
+        } else if (currentApplicant.status === 'スクリーニングNG' || currentApplicant.status.includes('キャンセル')) {
+            document.getElementById('startInterviewContainer').innerHTML = '<p style="color:red; font-size:18px; font-weight:bold;">この面接URLは現在無効です。</p>';
+            return;
+        }
+
+        checkInterviewEntryTiming();
+    } else {
+        document.getElementById('startInterviewContainer').innerHTML = `<p style="color:red;">エラー: ${res.message}</p>`;
+    }
+}
+
+function checkInterviewEntryTiming() {
+    if (!currentApplicant || !currentApplicant.dateTimeStr || currentApplicant.dateTimeStr === '-') {
+        showInterviewReady();
+        return;
+    }
+
+    const interviewTime = new Date(currentApplicant.dateTimeStr.replace(/-/g, '/'));
+    if (isNaN(interviewTime.getTime())) {
+        showInterviewReady();
+        return;
+    }
+
+    const now = new Date();
+    const diffMs = interviewTime.getTime() - now.getTime();
+    const fiveMinMs = 5 * 60 * 1000;
+
+    if (diffMs > fiveMinMs) {
+        showInterviewWait(interviewTime, fiveMinMs);
+    } else {
+        showInterviewReady();
+    }
+}
+
+function showInterviewReady() {
+    if (interviewTimer) clearInterval(interviewTimer);
+    const checkingDiv = document.getElementById('interviewCheckingStatus');
+    if (checkingDiv) checkingDiv.style.display = 'none';
+    const waitArea = document.getElementById('interviewWaitArea');
+    if (waitArea) waitArea.style.display = 'none';
+    const readyArea = document.getElementById('interviewReadyArea');
+    if (readyArea) readyArea.style.display = 'block';
+}
+
+function showInterviewWait(interviewTime, fiveMinMs) {
+    const checkingDiv = document.getElementById('interviewCheckingStatus');
+    if (checkingDiv) checkingDiv.style.display = 'none';
+    const readyArea = document.getElementById('interviewReadyArea');
+    if (readyArea) readyArea.style.display = 'none';
+    const waitArea = document.getElementById('interviewWaitArea');
+    waitArea.style.display = 'block';
+
+    const openTime = new Date(interviewTime.getTime() - fiveMinMs);
+    const openTimeStr = ('0' + openTime.getHours()).slice(-2) + ':' + ('0' + openTime.getMinutes()).slice(-2);
+
+    waitArea.innerHTML = `
+        <div style="padding: 30px 20px; background: #fff3e0; border-radius: 8px; border: 1px solid #ffe0b2; margin: 10px auto; max-width: 520px; box-sizing: border-box;">
+            <h3 style="color: #e65100; margin-top: 0; font-size: 20px;">面接開始前です</h3>
+            <p style="font-size: 15px; color: #444; line-height: 1.8; margin-bottom: 15px;">
+                面接予定日時：<b style="color:#111;">${currentApplicant.dateTimeStr}</b><br>
+                面接会場へは【開始5分前の ${openTimeStr}】より入室いただけます。<br>
+                開始時刻の5分前になるまで、しばらくお待ちください。
+            </p>
+            <div id="waitCountdown" style="font-size: 14px; font-weight: bold; color: #d84315; margin-bottom: 15px;"></div>
+            <button class="btn" onclick="checkInterviewEntryTiming()" style="background-color: #f2994a; padding: 10px 20px;">入室可能か再確認する</button>
+        </div>
+    `;
+
+    if (interviewTimer) clearInterval(interviewTimer);
+    interviewTimer = setInterval(() => {
+        const now = new Date();
+        const remainMs = (interviewTime.getTime() - fiveMinMs) - now.getTime();
+        if (remainMs <= 0) {
+            clearInterval(interviewTimer);
+            showInterviewReady();
+        } else {
+            const min = Math.floor(remainMs / 60000);
+            const sec = Math.floor((remainMs % 60000) / 1000);
+            const cdEl = document.getElementById('waitCountdown');
+            if (cdEl) {
+                cdEl.innerText = `入室可能まで：あと ${min}分 ${sec}秒`;
+            }
+        }
+    }, 1000);
+}
+
+function startAIInterview() {
+    if (currentApplicant && currentApplicant.dateTimeStr && currentApplicant.dateTimeStr !== '-') {
+        const interviewTime = new Date(currentApplicant.dateTimeStr.replace(/-/g, '/'));
+        if (!isNaN(interviewTime.getTime())) {
+            const now = new Date();
+            const diffMs = interviewTime.getTime() - now.getTime();
+            if (diffMs > 5 * 60 * 1000) {
+                showAlert("面接開始の5分前になるまで面接を開始できません。");
+                checkInterviewEntryTiming();
+                return;
+            }
+        }
+    }
+
+    if (interviewTimer) clearInterval(interviewTimer);
+    document.getElementById('startInterviewContainer').style.display = 'none';
+    document.getElementById('activeInterviewContainer').style.display = 'block';
+    
+    const initialAiText = '本日はお忙しい中、AI面接にご参加いただきありがとうございます。面接官を務めますAIです。まずはじめに、簡単な自己紹介をお願いします。';
+    appendChatMessage('ai', initialAiText);
+    chatHistory.push({ role: 'model', parts: [{ text: initialAiText }] });
+    speakText(initialAiText);
+    initSpeechRecognition();
+}
+
+function initSpeechRecognition() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) return showAlert('お使いのブラウザは音声認識をサポートしていません。ChromeかSafariをご利用ください。');
+    
+    recognition = new SpeechRecognition();
+    recognition.lang = 'ja-JP';
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    
+    recognition.onstart = function() {
+        isRecording = true;
+        currentTranscript = "";
+        finalAndInterimTranscript = "";
+        document.getElementById('micBtn').classList.add('recording');
+        document.getElementById('statusText').innerText = "【録音中】話してください (終了するにはもう一度マイクボタンを押します)";
+    };
+    
+    recognition.onresult = function(e) {
+        let interimTranscript = '';
+        let finalTranscript = '';
+        for (let i = e.resultIndex; i < e.results.length; ++i) {
+            if (e.results[i].isFinal) finalTranscript += e.results[i][0].transcript;
+            else interimTranscript += e.results[i][0].transcript;
+        }
+        currentTranscript += finalTranscript;
+        finalAndInterimTranscript = currentTranscript + interimTranscript;
+        document.getElementById('statusText').innerText = "【録音中 (もう一度押して送信)】\n" + finalAndInterimTranscript;
+    };
+    
+    recognition.onerror = function(e) {
+        if (e.error === 'no-speech') return;
+        isRecording = false; stopRecordingState();
+        document.getElementById('statusText').innerText = "マイクエラー: " + e.error;
+    };
+    
+    recognition.onend = function() {
+        if (isRecording) { try { recognition.start(); } catch(err) { isRecording = false; stopRecordingState(); } }
+    };
+}
+
+function toggleMic() {
+    if (!recognition) initSpeechRecognition();
+    if (isRecording) {
+        isRecording = false; recognition.stop(); stopRecordingState();
+        let textToSend = finalAndInterimTranscript.trim() || currentTranscript.trim();
+        if (textToSend) handleUserAnswer(textToSend);
+        else document.getElementById('statusText').innerText = "音声が認識されませんでした。もう一度マイクを押して話してください。";
+    } else {
+        currentTranscript = ""; finalAndInterimTranscript = "";
+        try { if('speechSynthesis' in window) window.speechSynthesis.cancel(); recognition.start(); } catch(e){}
+    }
+}
+
+function stopRecordingState() {
+    document.getElementById('micBtn').classList.remove('recording');
+    if(!document.getElementById('statusText').innerText.includes("考え中")) document.getElementById('statusText').innerText = "マイクボタンを押して回答を話してください";
+}
+
+async function handleUserAnswer(userText) {
+    appendChatMessage('user', userText);
+    chatHistory.push({ role: 'user', parts: [{ text: userText }] });
+    document.getElementById('statusText').innerText = "AI面接官が考え中...";
+    
+    const res = await callApi('processInterviewTurn', { applicantName: currentApplicant.name, chatHistory });
+    if (res.success) {
+        appendChatMessage('ai', res.text);
+        chatHistory.push({ role: 'model', parts: [{ text: res.text }] });
+        speakText(res.text);
+        document.getElementById('statusText').innerText = "マイクボタンを押して回答を話してください";
+    } else {
+        document.getElementById('statusText').innerText = "エラー: " + (res.message || "通信に失敗しました。");
+    }
+}
+
+function appendChatMessage(sender, text) {
+    const box = document.getElementById('chatBox');
+    const d = document.createElement('div'); 
+    d.className = `msg ${sender === 'ai' ? 'msg-ai' : 'msg-user'}`; 
+    d.innerHTML = text;
+    box.appendChild(d); 
+    box.scrollTop = box.scrollHeight;
+}
+
+function speakText(text) {
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const uttr = new SpeechSynthesisUtterance(text); 
+        uttr.lang = 'ja-JP'; uttr.rate = 1.0;
+        window.speechSynthesis.speak(uttr);
+    }
+}
+
+function confirmFinishInterview() {
+    if (chatHistory.length <= 1) return showAlert("まだ面接が開始されていません。");
+    showConfirm("面接を終了して評価を送信しますか？", finishAIInterview);
+}
+
+async function finishAIInterview() {
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+    if (recognition && isRecording) { isRecording = false; recognition.stop(); }
+    
+    document.getElementById('activeInterviewContainer').style.display = 'none';
+    document.getElementById('startInterviewContainer').style.display = 'block';
+    document.getElementById('startInterviewContainer').innerHTML = '<p style="font-size:18px; font-weight:bold; color:#1a73e8;">AIが評価レポートを作成・送信しています...<br>この画面を閉じないでください。</p>';
+    
+    let fullLog = "";
+    chatHistory.forEach(item => { fullLog += `【${item.role === 'model' ? 'AI面接官' : '応募者'}】: ${item.parts[0].text}\n\n`; });
+    
+    const res = await callApi('finishInterviewAndGenerateReport', { applicantId: currentApplicant.id, applicantName: currentApplicant.name, chatHistory: fullLog });
+    
+    document.getElementById('startInterviewContainer').style.display = 'none';
+    document.getElementById('finishInterviewContainer').style.display = 'block';
+    if (!res.success) { 
+        document.getElementById('finishStatusTitle').style.color = "red"; 
+        document.getElementById('finishStatusText').innerText = "エラー: " + res.message; 
+    }
+}
+</script>
+</body>
+</html>
